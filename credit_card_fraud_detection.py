@@ -70,9 +70,9 @@ print("CREDIT CARD FRAUD DETECTION — END-TO-END PIPELINE")
 print("=" * 70)
 
 
-# ============================================================================
+
 # 1. DATA COLLECTION & LOADING
-# ============================================================================
+
 print("\n" + "=" * 70)
 print("PHASE 1: DATA COLLECTION & LOADING")
 print("=" * 70)
@@ -94,9 +94,9 @@ print(f"\nFraud rate: {df['Class'].mean()*100:.3f}%")
 print(f"Imbalance ratio: 1:{int((1-df['Class'].mean())/df['Class'].mean())}")
 
 
-# ============================================================================
+
 # 2. EXPLORATORY DATA ANALYSIS (EDA)
-# ============================================================================
+
 print("\n" + "=" * 70)
 print("PHASE 2: EXPLORATORY DATA ANALYSIS")
 print("=" * 70)
@@ -114,22 +114,41 @@ df = df.drop_duplicates()
 print(f"Rows after deduplication: {len(df):,} (removed {n_before - len(df)})")
 
 # 2.2 Class distribution plot
-fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+fig, axes = plt.subplots(1, 3, figsize=(20, 6))
 
-# Bar plot
+# Bar plot (normal scale)
 counts = df["Class"].value_counts()
 colors = ["#2ecc71", "#e74c3c"]
 axes[0].bar(["Legitimate", "Fraud"], counts.values, color=colors, edgecolor="black")
-axes[0].set_title("Transaction Class Distribution", fontsize=14, fontweight="bold")
+axes[0].set_title("Class Distribution (Linear Scale)", fontsize=14, fontweight="bold")
 axes[0].set_ylabel("Count")
 for i, v in enumerate(counts.values):
     axes[0].text(i, v + 1000, f"{v:,}", ha="center", fontweight="bold")
 
-# Pie chart (log scale visual)
-axes[1].pie(counts.values, labels=["Legitimate\n(99.83%)", "Fraud\n(0.17%)"],
-            colors=colors, autopct="%1.3f%%", startangle=90,
-            explode=(0, 0.15), shadow=True, textprops={"fontsize": 12})
-axes[1].set_title("Class Imbalance Visualization", fontsize=14, fontweight="bold")
+# Bar plot (LOG scale — makes fraud visible)
+axes[1].bar(["Legitimate", "Fraud"], counts.values, color=colors, edgecolor="black")
+axes[1].set_yscale("log")
+axes[1].set_title("Class Distribution (Log Scale)", fontsize=14, fontweight="bold")
+axes[1].set_ylabel("Count (log)")
+for i, v in enumerate(counts.values):
+    axes[1].text(i, v * 1.3, f"{v:,}", ha="center", fontweight="bold")
+
+# Imbalance ratio visualization (waffle-style)
+ratio = int(counts.values[0] / counts.values[1])
+grid_size = 24
+grid = np.zeros((grid_size, grid_size))
+grid[0, 0] = 1  # 1 fraud out of ~578
+axes[2].imshow(grid, cmap=matplotlib.colors.ListedColormap(["#2ecc71", "#e74c3c"]),
+               interpolation="nearest")
+axes[2].set_title(f"Imbalance Ratio ≈ 1:{ratio}\n(1 red = fraud per {ratio} transactions)",
+                  fontsize=13, fontweight="bold")
+axes[2].set_xticks([])
+axes[2].set_yticks([])
+# Add annotation
+axes[2].annotate("← 1 Fraud", xy=(0, 0), xytext=(3, 2),
+                 fontsize=12, fontweight="bold", color="#e74c3c",
+                 arrowprops=dict(arrowstyle="->", color="#e74c3c", lw=2))
+
 plt.tight_layout()
 plt.savefig(f"{OUTPUT_DIR}/01_class_distribution.png", dpi=150, bbox_inches="tight")
 plt.close()
@@ -226,9 +245,9 @@ print(f"• Peak fraud hour:            {hourly_fraud.idxmax()}:00 ({hourly_frau
 print(f"• Lowest fraud hour:          {hourly_fraud.idxmin()}:00 ({hourly_fraud.min():.2f}%)")
 
 
-# ============================================================================
+
 # 3. FEATURE ENGINEERING
-# ============================================================================
+
 print("\n" + "=" * 70)
 print("PHASE 3: FEATURE ENGINEERING")
 print("=" * 70)
@@ -281,9 +300,9 @@ print(f"Features for modeling: {len(feature_cols)}")
 print(f"Feature list: {feature_cols}")
 
 
-# ============================================================================
+
 # 4. DATA PREPARATION — TRAIN/TEST SPLIT
-# ============================================================================
+
 print("\n" + "=" * 70)
 print("PHASE 4: DATA PREPARATION — TRAIN/TEST SPLIT")
 print("=" * 70)
@@ -305,9 +324,9 @@ print(f"  Fraud:      {(y_test==1).sum():,}")
 print(f"\n** Test set remains IMBALANCED (real-world evaluation) **")
 
 
-# ============================================================================
+
 # 5. RESAMPLING STRATEGIES
-# ============================================================================
+
 print("\n" + "=" * 70)
 print("PHASE 5: RESAMPLING STRATEGIES")
 print("=" * 70)
@@ -355,9 +374,9 @@ plt.close()
 print("\n[SAVED] 06_resampling_comparison.png")
 
 
-# ============================================================================
+
 # 6. MODEL DEVELOPMENT & TRAINING
-# ============================================================================
+
 print("\n" + "=" * 70)
 print("PHASE 6: MODEL DEVELOPMENT & TRAINING")
 print("=" * 70)
@@ -370,9 +389,7 @@ X_train_final, y_train_final = resampling_methods["Hybrid_SMOTETomek"]
 results = {}
 
 
-# -------------------------------------------------------
 # MODEL 1: Logistic Regression
-# -------------------------------------------------------
 print("\n--- Model 1: Logistic Regression ---")
 t0 = time.time()
 lr_model = LogisticRegression(
@@ -401,9 +418,7 @@ print(f"  AUC-ROC: {roc_auc_score(y_test, y_prob_lr):.4f}")
 print(classification_report(y_test, y_pred_lr, target_names=["Legitimate", "Fraud"]))
 
 
-# -------------------------------------------------------
 # MODEL 2: Random Forest
-# -------------------------------------------------------
 print("\n--- Model 2: Random Forest ---")
 t0 = time.time()
 rf_model = RandomForestClassifier(
@@ -432,9 +447,7 @@ print(f"  AUC-ROC: {roc_auc_score(y_test, y_prob_rf):.4f}")
 print(classification_report(y_test, y_pred_rf, target_names=["Legitimate", "Fraud"]))
 
 
-# -------------------------------------------------------
 # MODEL 3: XGBoost
-# -------------------------------------------------------
 print("\n--- Model 3: XGBoost ---")
 t0 = time.time()
 # Calculate scale_pos_weight for class imbalance
@@ -468,9 +481,7 @@ print(f"  AUC-ROC: {roc_auc_score(y_test, y_prob_xgb):.4f}")
 print(classification_report(y_test, y_pred_xgb, target_names=["Legitimate", "Fraud"]))
 
 
-# -------------------------------------------------------
 # MODEL 4: Deep Autoencoder (Anomaly Detection)
-# -------------------------------------------------------
 print("\n--- Model 4: Deep Autoencoder (Anomaly Detection) ---")
 
 # Lazy import TensorFlow (heavy dependency)
@@ -593,9 +604,7 @@ if TF_AVAILABLE:
     print("  [SAVED] 08_ae_reconstruction_errors.png")
 
 
-    # -------------------------------------------------------
     # MODEL 5: Feed-Forward Neural Network (DL Classifier)
-    # -------------------------------------------------------
     print("\n--- Model 5: Feed-Forward Neural Network ---")
 
     nn_model = keras.Sequential([
@@ -673,9 +682,9 @@ if TF_AVAILABLE:
             axes[1].text(0.5, 0.5, "No AUC metric recorded", ha="center", va="center", transform=axes[1].transAxes)
 
 
-# ============================================================================
+
 # 7. MODEL EVALUATION & COMPARISON
-# ============================================================================
+
 print("\n" + "=" * 70)
 print("PHASE 7: MODEL EVALUATION & COMPARISON")
 print("=" * 70)
@@ -782,9 +791,9 @@ plt.close()
 print("[SAVED] 13_metrics_comparison.png")
 
 
-# ============================================================================
+
 # 8. THRESHOLD OPTIMIZATION
-# ============================================================================
+
 print("\n" + "=" * 70)
 print("PHASE 8: THRESHOLD OPTIMIZATION")
 print("=" * 70)
@@ -840,9 +849,9 @@ plt.close()
 print("\n[SAVED] 14_threshold_optimization.png")
 
 
-# ============================================================================
+
 # 9. RESAMPLING STRATEGY COMPARISON
-# ============================================================================
+
 print("\n" + "=" * 70)
 print("PHASE 9: RESAMPLING STRATEGY COMPARISON (XGBoost)")
 print("=" * 70)
@@ -900,9 +909,9 @@ plt.close()
 print("\n[SAVED] 15_resampling_strategy_comparison.png")
 
 
-# ============================================================================
+
 # 10. FEATURE IMPORTANCE ANALYSIS
-# ============================================================================
+
 print("\n" + "=" * 70)
 print("PHASE 10: FEATURE IMPORTANCE ANALYSIS")
 print("=" * 70)
@@ -945,9 +954,9 @@ for feat, imp in xgb_importance.head(10).items():
     print(f"  {feat:30s} {imp:.4f}")
 
 
-# ============================================================================
+
 # 11. ERROR ANALYSIS
-# ============================================================================
+
 print("\n" + "=" * 70)
 print("PHASE 11: ERROR ANALYSIS")
 print("=" * 70)
@@ -994,9 +1003,9 @@ plt.close()
 print("[SAVED] 17_error_analysis.png")
 
 
-# ============================================================================
+
 # 12. BUSINESS IMPACT ANALYSIS
-# ============================================================================
+
 print("\n" + "=" * 70)
 print("PHASE 12: BUSINESS IMPACT ANALYSIS")
 print("=" * 70)
@@ -1031,9 +1040,9 @@ for name, res in results.items():
     print(f"  Net savings:           ${fraud_prevented - investigation_cost:,.2f}")
 
 
-# ============================================================================
+
 # 13. MODEL DEPLOYMENT STRATEGY
-# ============================================================================
+
 print("\n" + "=" * 70)
 print("PHASE 13: MODEL DEPLOYMENT STRATEGY")
 print("=" * 70)
@@ -1144,9 +1153,9 @@ Deployment Architecture:
 """)
 
 
-# ============================================================================
+
 # 14. FINAL SUMMARY
-# ============================================================================
+
 print("=" * 70)
 print("FINAL SUMMARY")
 print("=" * 70)
