@@ -113,6 +113,47 @@ n_before = len(df)
 df = df.drop_duplicates()
 print(f"Rows after deduplication: {len(df):,} (removed {n_before - len(df)})")
 
+# 2.1b Skewness & Kurtosis analysis
+print("\n--- Skewness & Kurtosis ---")
+skewness = df.skew(numeric_only=True).sort_values(ascending=False)
+kurtosis_vals = df.kurtosis(numeric_only=True).sort_values(ascending=False)
+
+print("\nTop 10 Most Skewed Features:")
+print(skewness.head(10).to_string(float_format="%.4f"))
+print("\nBottom 5 (Most Negatively Skewed):")
+print(skewness.tail(5).to_string(float_format="%.4f"))
+print("\nTop 10 Highest Kurtosis Features:")
+print(kurtosis_vals.head(10).to_string(float_format="%.4f"))
+
+fig, axes = plt.subplots(1, 2, figsize=(18, 8))
+
+# Skewness plot — highlight highly skewed features (|skew| > 1)
+skew_sorted = skewness.sort_values()
+skew_colors = ["#e74c3c" if abs(v) > 1 else "#3498db" for v in skew_sorted]
+skew_sorted.plot(kind="barh", ax=axes[0], color=skew_colors, edgecolor="black", linewidth=0.5)
+axes[0].set_title("Feature Skewness", fontsize=14, fontweight="bold")
+axes[0].set_xlabel("Skewness")
+axes[0].axvline(0, color="black", linestyle="-", linewidth=0.8)
+axes[0].axvline(-1, color="gray", linestyle="--", linewidth=0.8, alpha=0.5)
+axes[0].axvline(1, color="gray", linestyle="--", linewidth=0.8, alpha=0.5, label="|Skew| = 1 threshold")
+axes[0].legend(fontsize=9)
+
+# Kurtosis plot — highlight leptokurtic features (kurtosis > 3)
+kurt_sorted = kurtosis_vals.sort_values()
+kurt_colors = ["#e74c3c" if v > 3 else "#3498db" for v in kurt_sorted]
+kurt_sorted.plot(kind="barh", ax=axes[1], color=kurt_colors, edgecolor="black", linewidth=0.5)
+axes[1].set_title("Feature Kurtosis (Excess)", fontsize=14, fontweight="bold")
+axes[1].set_xlabel("Kurtosis")
+axes[1].axvline(0, color="gray", linestyle="--", linewidth=0.8, alpha=0.5, label="Normal (excess κ = 0)")
+axes[1].legend(fontsize=9)
+
+plt.suptitle("Distributional Shape Analysis — Skewness & Kurtosis",
+             fontsize=16, fontweight="bold")
+plt.tight_layout()
+plt.savefig(f"{OUTPUT_DIR}/01b_skewness_kurtosis.png", dpi=150, bbox_inches="tight")
+plt.close()
+print("\n[SAVED] 01b_skewness_kurtosis.png")
+
 # 2.2 Class distribution plot
 fig, axes = plt.subplots(1, 3, figsize=(20, 6))
 
@@ -252,68 +293,101 @@ print("\n" + "=" * 70)
 print("PHASE 3: FEATURE ENGINEERING")
 print("=" * 70)
 
-# 3.1 Behavioral features (as recommended by Fariha et al., 2025)
-print("\nEngineering behavioral features...")
-
-# Hour of day (already created)
-# Is nighttime transaction (higher fraud risk per literature)
-df["Is_Night"] = ((df["Hour"] >= 22) | (df["Hour"] <= 5)).astype(int)
-
-# Amount-based features
-df["Log_Amount"] = np.log1p(df["Amount"])
-df["Amount_Zscore"] = (df["Amount"] - df["Amount"].mean()) / df["Amount"].std()
-df["Is_High_Amount"] = (df["Amount"] > df["Amount"].quantile(0.95)).astype(int)
-
-# Interaction features between important PCA components
-df["V1_V2_interaction"] = df["V1"] * df["V2"]
-df["V3_V4_interaction"] = df["V3"] * df["V4"]
-df["V14_V17_interaction"] = df["V14"] * df["V17"]
-
-# Magnitude of PCA components (L2 norm of top components)
+print("\nEngineering features across 8 categories...")
 pca_cols = [f"V{i}" for i in range(1, 29)]
+
+# ---- 3.1 Amount features ----
+df["Log_Amount"] = np.log1p(df["Amount"])
+
+# ---- 3.2 Temporal features — cyclical encoding ----
+# Cyclical encoding preserves circular nature of hours (23:00 ≈ 00:00)
+# Fraud rate peaks at 1-3 AM (temporal plot); sin/cos captures this for all models
+df["Hour_sin"] = np.sin(2 * np.pi * df["Hour"] / 24)
+df["Hour_cos"] = np.cos(2 * np.pi * df["Hour"] / 24)
+# Inter-transaction interval (global temporal density signal)
+df["Time_Diff"] = df["Time"].diff().fillna(0)
+
+# ---- 3.3 PCA pairwise interaction features ----
+# Interactions between top fraud-correlated PCA components
+# V17 (r=-0.31), V14 (-0.29), V12 (-0.25), V10 (-0.21), V4 (+0.13), V3 (-0.18)
+df["V14_V17_interaction"] = df["V14"] * df["V17"]
+df["V14_V10_interaction"] = df["V14"] * df["V10"]
+df["V14_V12_interaction"] = df["V14"] * df["V12"]
+df["V10_V12_interaction"] = df["V10"] * df["V12"]
+df["V17_V12_interaction"] = df["V17"] * df["V12"]
+df["V3_V4_interaction"]  = df["V3"] * df["V4"]
+
+# ---- 3.4 PCA polynomial features ----
+# Squared terms capture non-linear thresholds for the 4 dominant predictors
+# (PCA distributions show fraud clusters at extreme negative tails)
+df["V14_squared"] = df["V14"] ** 2
+df["V10_squared"] = df["V10"] ** 2
+df["V12_squared"] = df["V12"] ** 2
+df["V17_squared"] = df["V17"] ** 2
+
+# ---- 3.5 PCA magnitude features ----
+# Full L2 norm — overall distance from origin in PCA space
 df["PCA_magnitude"] = np.sqrt((df[pca_cols] ** 2).sum(axis=1))
+# Focused magnitude of top-5 fraud-correlated components only
+df["V_top5_magnitude"] = np.sqrt(
+    df["V14"]**2 + df["V10"]**2 + df["V12"]**2 + df["V17"]**2 + df["V4"]**2
+)
 
-# Amount deviation from mean (per-transaction anomaly signal)
-df["Amount_Deviation"] = np.abs(df["Amount"] - df["Amount"].mean())
+# ---- 3.6 Per-row PCA distributional features ----
+# These capture the "shape" of each transaction's PCA vector
+# Fraud transactions are outliers in multiple PCA dimensions simultaneously
+pca_values = df[pca_cols].values
+df["V_mean"]      = pca_values.mean(axis=1)
+df["V_std"]       = pca_values.std(axis=1)
+df["V_range"]     = pca_values.max(axis=1) - pca_values.min(axis=1)
+# Count of PCA components with |value| > 2 — direct multi-dimensional anomaly signal
+df["V_n_extreme"] = (np.abs(pca_values) > 2).sum(axis=1)
 
-# Time-based features
-df["Time_Diff"] = df["Time"].diff().fillna(0)  # inter-transaction interval
-df["Log_Time"] = np.log1p(df["Time"])
+# ---- 3.7 Three-way and cross-domain interactions ----
+# Three-way interaction of the 3 most important features (V14, V10, V12)
+df["V14_V10_V12"] = df["V14"] * df["V10"] * df["V12"]
+# Amount cross-interactions with strongest PCA fraud signals
+# (fraud Amount distribution is bimodal; combining with PCA captures both patterns)
+df["Amount_V14"] = df["Amount"] * df["V14"]
+df["Amount_V17"] = df["Amount"] * df["V17"]
 
-print(f"New features added: {len(df.columns) - 31}")
-print(f"Total features now: {len(df.columns)}")
+n_engineered = len(df.columns) - 31  # 31 = original 31 cols
+print(f"  Engineered features added: {n_engineered}")
+print(f"  Total columns now:         {len(df.columns)}")
 
-# 3.2 Feature selection — drop raw Time (keep engineered versions)
-drop_cols = ["Time"]
+# ---- 3.8 Feature selection — drop raw Time and Hour ----
+# Time: replaced by Time_Diff; Hour: replaced by Hour_sin/Hour_cos
+drop_cols = ["Time", "Hour"]
 df_model = df.drop(columns=drop_cols)
 
-# 3.3 Scaling
-print("\nScaling features...")
 feature_cols = [c for c in df_model.columns if c != "Class"]
 target = "Class"
-
-# RobustScaler handles outliers better than StandardScaler
-scaler = RobustScaler()
-df_model[feature_cols] = scaler.fit_transform(df_model[feature_cols])
 
 print(f"Features for modeling: {len(feature_cols)}")
 print(f"Feature list: {feature_cols}")
 
 
 
-# 4. DATA PREPARATION — TRAIN/TEST SPLIT
+# 4. DATA PREPARATION — TRAIN/TEST SPLIT & SCALING
 
 print("\n" + "=" * 70)
-print("PHASE 4: DATA PREPARATION — TRAIN/TEST SPLIT")
+print("PHASE 4: DATA PREPARATION — TRAIN/TEST SPLIT & SCALING")
 print("=" * 70)
 
 X = df_model[feature_cols].values
 y = df_model[target].values
 
-# Stratified split: 80/20
+# Stratified split: 80/20 — BEFORE scaling to prevent data leakage
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42, stratify=y
 )
+
+# RobustScaler handles outliers better than StandardScaler
+# Fit on training data ONLY to prevent data leakage, then transform both
+print("\nScaling features (fit on train only)...")
+scaler = RobustScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
 
 print(f"\nTraining set: {X_train.shape[0]:,} samples")
 print(f"  Legitimate: {(y_train==0).sum():,}")
@@ -322,6 +396,7 @@ print(f"\nTest set:     {X_test.shape[0]:,} samples")
 print(f"  Legitimate: {(y_test==0).sum():,}")
 print(f"  Fraud:      {(y_test==1).sum():,}")
 print(f"\n** Test set remains IMBALANCED (real-world evaluation) **")
+print(f"** Scaler fit on training data only (no data leakage) **")
 
 
 
@@ -680,6 +755,15 @@ if TF_AVAILABLE:
             axes[1].plot(nn_history.history[f"val_{key}"], label=f"Val {key}")
         else:
             axes[1].text(0.5, 0.5, "No AUC metric recorded", ha="center", va="center", transform=axes[1].transAxes)
+
+    axes[1].set_title("Neural Network AUC", fontweight="bold")
+    axes[1].legend()
+    axes[1].grid(True, alpha=0.3)
+    plt.suptitle("Neural Network Training Curves", fontsize=14, fontweight="bold")
+    plt.tight_layout()
+    plt.savefig(f"{OUTPUT_DIR}/09_nn_training_curves.png", dpi=150, bbox_inches="tight")
+    plt.close()
+    print("  [SAVED] 09_nn_training_curves.png")
 
 
 

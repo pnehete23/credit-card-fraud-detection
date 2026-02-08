@@ -15,7 +15,7 @@ with open("output/robust_scaler.pkl", "rb") as f:
 with open("output/feature_list.json", "r") as f:
     features = json.load(f)
 
-def predict_fraud(transaction: dict, threshold: float = 0.45):
+def predict_fraud(transaction: dict, threshold: float = 0.75):
     """Predict if a transaction is fraudulent.
 
     Args:
