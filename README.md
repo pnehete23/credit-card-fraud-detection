@@ -100,3 +100,6 @@ python credit_card_fraud_detection.py
 - **Framework:** Python 3.10+, scikit-learn, XGBoost, TensorFlow/Keras
 - **Environment:** Anaconda / Jupyter / Google Colab
 - **Hardware:** CPU (sufficient), GPU recommended for DL models
+
+## Vistualization Dashboard
+
