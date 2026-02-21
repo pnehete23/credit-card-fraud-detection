@@ -101,6 +101,6 @@ python credit_card_fraud_detection.py
 - **Environment:** Anaconda / Jupyter / Google Colab
 - **Hardware:** CPU (sufficient), GPU recommended for DL models
 
-## Vistualization Dashboard
-[View the HTML File](./dashboard.html)
+## Vistualization Dashboard(notebook)
+[View the txt File](./analysis_notebook_report.txt)
 
