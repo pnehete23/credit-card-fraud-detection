@@ -102,4 +102,5 @@ python credit_card_fraud_detection.py
 - **Hardware:** CPU (sufficient), GPU recommended for DL models
 
 ## Vistualization Dashboard
+[View the HTML File](./dashboard.html)
 
