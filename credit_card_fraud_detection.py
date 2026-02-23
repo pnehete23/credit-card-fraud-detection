@@ -138,9 +138,9 @@ axes[0].axvline(-1, color="gray", linestyle="--", linewidth=0.8, alpha=0.5)
 axes[0].axvline(1, color="gray", linestyle="--", linewidth=0.8, alpha=0.5, label="|Skew| = 1 threshold")
 axes[0].legend(fontsize=9)
 
-# Kurtosis plot — highlight leptokurtic features (kurtosis > 3)
+# Kurtosis plot — highlight leptokurtic features (excess kurtosis > 0)
 kurt_sorted = kurtosis_vals.sort_values()
-kurt_colors = ["#e74c3c" if v > 3 else "#3498db" for v in kurt_sorted]
+kurt_colors = ["#e74c3c" if v > 0 else "#3498db" for v in kurt_sorted]
 kurt_sorted.plot(kind="barh", ax=axes[1], color=kurt_colors, edgecolor="black", linewidth=0.5)
 axes[1].set_title("Feature Kurtosis (Excess)", fontsize=14, fontweight="bold")
 axes[1].set_xlabel("Kurtosis")
