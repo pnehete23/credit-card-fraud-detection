@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Credit Card Fraud Detection — Model Comparison Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0a0c10;
+    --surface:  #111318;
+    --surface2: #181c23;
+    --border:   rgba(255,255,255,0.07);
+    --border2:  rgba(255,255,255,0.13);
+    --text:     #e8eaf0;
+    --muted:    #7a7f8e;
+    --faint:    #363b47;
+    --best:     #2a7fff;
+    --best-dim: rgba(42,127,255,0.12);
+    --best-glow:rgba(42,127,255,0.25);
+    --green:    #22c97a;
+    --amber:    #f0a832;
+    --red:      #f05252;
+    --rf:       #22c97a;
+    --nn:       #f0a832;
+    --lr:       #c06adf;
+    --dummy:    #4a5060;
+    --mono: 'DM Mono', monospace;
+    --sans: 'Syne', sans-serif;
+    --body: 'Inter', sans-serif;
+  }
+
+  html { background: var(--bg); color: var(--text); font-family: var(--body); font-size: 14px; line-height: 1.5; }
+
+  body { min-height: 100vh; padding: 32px 24px 60px; max-width: 1100px; margin: 0 auto; }
+
+  /* Header */
+  header { margin-bottom: 36px; border-bottom: 1px solid var(--border); padding-bottom: 24px; }
+  .header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .header-label { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+  h1 { font-family: var(--sans); font-size: 26px; font-weight: 700; color: var(--text); letter-spacing: -0.5px; }
+  .header-sub { font-size: 13px; color: var(--muted); margin-top: 4px; font-family: var(--body); font-weight: 300; }
+  .best-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--best-dim); border: 1px solid rgba(42,127,255,0.35); border-radius: 6px; padding: 6px 14px; font-family: var(--mono); font-size: 11px; color: var(--best); white-space: nowrap; }
+  .best-badge::before { content:''; width:6px; height:6px; border-radius:50%; background:var(--best); animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+
+  /* KPI row */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin-bottom: 24px; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; position: relative; overflow: hidden; }
+  .kpi.highlight { border-color: rgba(42,127,255,0.4); background: linear-gradient(135deg, #0d1829 0%, #111318 100%); }
+  .kpi.highlight::after { content:''; position:absolute; top:0; right:0; width:60px; height:60px; background: radial-gradient(circle, rgba(42,127,255,0.15) 0%, transparent 70%); }
+  .kpi-label { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
+  .kpi-val { font-family: var(--sans); font-size: 28px; font-weight: 700; line-height: 1; color: var(--text); }
+  .kpi.highlight .kpi-val { color: var(--best); }
+  .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 5px; font-family: var(--body); }
+
+  /* Section */
+  .section-label { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; padding-left: 2px; }
+
+  /* Grid layouts */
+  .row2 { display: grid; grid-template-columns: minmax(0,1.5fr) minmax(0,1fr); gap: 16px; margin-bottom: 20px; }
+  .row2b { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 16px; margin-bottom: 20px; }
+
+  /* Card */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+  .card-title { font-family: var(--sans); font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 16px; }
+
+  /* Metric tabs */
+  .mtabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 16px; }
+  .mtab { font-family: var(--mono); font-size: 10px; padding: 4px 10px; border-radius: 4px; border: 1px solid var(--faint); background: transparent; color: var(--muted); cursor: pointer; letter-spacing: 0.05em; transition: all 0.15s; }
+  .mtab:hover { border-color: var(--border2); color: var(--text); }
+  .mtab.active { background: var(--best); border-color: var(--best); color: #fff; }
+
+  /* Bar rows */
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .bar-name { font-family: var(--body); font-size: 12px; color: var(--muted); width: 132px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .bar-track { flex: 1; background: var(--surface2); border-radius: 2px; height: 6px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+  .bar-val { font-family: var(--mono); font-size: 11px; color: var(--muted); width: 48px; text-align: right; flex-shrink: 0; }
+  .bar-row.best-row .bar-name { color: var(--best); }
+  .bar-row.best-row .bar-val { color: var(--best); }
+  .mk { font-family: var(--mono); font-size: 9px; background: var(--best-dim); color: var(--best); border: 1px solid rgba(42,127,255,0.3); border-radius: 3px; padding: 1px 4px; }
+
+  /* Scatter */
+  .scatter-wrap { position: relative; height: 220px; }
+  #scatter-canvas { width: 100%; height: 100%; display: block; }
+  .sc-tip { position: absolute; background: var(--surface2); border: 1px solid var(--border2); border-radius: 6px; padding: 8px 12px; font-size: 11px; color: var(--muted); pointer-events: none; display: none; z-index: 10; white-space: nowrap; font-family: var(--mono); }
+  .sc-tip strong { color: var(--text); display: block; margin-bottom: 2px; font-family: var(--sans); }
+
+  /* Heatmap */
+  .hm-grid { display: grid; gap: 3px; }
+  .hm-header { display: flex; gap: 3px; margin-bottom: 3px; }
+  .hm-row { display: flex; gap: 3px; align-items: center; }
+  .hm-model { font-family: var(--body); font-size: 11px; color: var(--muted); width: 108px; flex-shrink: 0; }
+  .hm-cell { flex: 1; height: 32px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 10px; transition: transform 0.1s; cursor: default; }
+  .hm-cell:hover { transform: scale(1.05); }
+  .hm-fold-label { flex: 1; text-align: center; font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .hm-mean { width: 48px; text-align: center; font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--text); }
+  .hm-note { font-size: 10px; color: var(--faint); margin-top: 10px; font-family: var(--body); line-height: 1.4; }
+
+  /* Table */
+  table.cmp { width: 100%; border-collapse: collapse; }
+  table.cmp th { font-family: var(--mono); font-size: 10px; color: var(--muted); text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); letter-spacing: 0.05em; text-transform: uppercase; font-weight: 400; }
+  table.cmp td { font-size: 12px; color: var(--text); padding: 8px 8px; border-bottom: 1px solid var(--border); font-family: var(--mono); }
+  table.cmp td:first-child { font-family: var(--body); color: var(--muted); }
+  table.cmp tr.best-row td { color: var(--best); }
+  table.cmp tr.best-row td:first-child { color: var(--best); }
+  table.cmp tr:last-child td { border-bottom: none; }
+  .delta { font-size: 9px; padding: 1px 4px; border-radius: 3px; margin-left: 4px; }
+  .delta-neg { background: rgba(240,82,82,0.15); color: #f08080; }
+  .test-chip { display: inline-block; font-family: var(--mono); font-size: 9px; background: rgba(34,201,122,0.12); color: var(--green); border: 1px solid rgba(34,201,122,0.3); border-radius: 3px; padding: 1px 5px; margin-left: 4px; }
+
+  /* Legend */
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .leg { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); font-family: var(--body); }
+  .leg-sq { width: 8px; height: 8px; border-radius: 2px; }
+
+  /* Time bars */
+  #time-bars .bar-row { margin-bottom: 8px; }
+
+  /* Footer */
+  footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 11px; color: var(--faint); font-family: var(--mono); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div>
+      <div class="header-label">Credit Card Fraud Detection — Practical Machine Learning</div>
+      <h1>Model Comparison Dashboard</h1>
+      <div class="header-sub">Shiroglazova · Nehete · Hu &nbsp;·&nbsp; February 2026 &nbsp;·&nbsp; Dataset: MLG-ULB / Kaggle (284,807 transactions, 0.172% fraud)</div>
+    </div>
+    <div class="best-badge">Best model: XGBoost</div>
+  </div>
+</header>
+
+<!-- KPI strip -->
+<p class="section-label">XGBoost — Final Test Set Performance</p>
+<div class="kpi-grid">
+  <div class="kpi highlight">
+    <div class="kpi-label">PR-AUC (primary)</div>
+    <div class="kpi-val">0.882</div>
+    <div class="kpi-sub">Test set · threshold 0.988</div>
+  </div>
+  <div class="kpi highlight">
+    <div class="kpi-label">Fraud caught</div>
+    <div class="kpi-val">77.6%</div>
+    <div class="kpi-sub">76 of 98 cases intercepted</div>
+  </div>
+  <div class="kpi highlight">
+    <div class="kpi-label">Precision</div>
+    <div class="kpi-val">95.0%</div>
+    <div class="kpi-sub">4 false alarms / 56,864 legit</div>
+  </div>
+  <div class="kpi highlight">
+    <div class="kpi-label">Train time</div>
+    <div class="kpi-val">83s</div>
+    <div class="kpi-sub">vs 727s Random Forest</div>
+  </div>
+</div>
+
+<!-- Row: bar chart + scatter -->
+<div class="row2">
+  <div class="card">
+    <div class="card-title">Validation-set metrics by model</div>
+    <div class="mtabs" id="mtabs">
+      <button class="mtab active" onclick="setMetric('prauc',this)">PR-AUC</button>
+      <button class="mtab" onclick="setMetric('f1',this)">F1</button>
+      <button class="mtab" onclick="setMetric('recall',this)">Recall</button>
+      <button class="mtab" onclick="setMetric('precision',this)">Precision</button>
+      <button class="mtab" onclick="setMetric('rocauc',this)">ROC-AUC</button>
+      <button class="mtab" onclick="setMetric('mcc',this)">MCC</button>
+    </div>
+    <div id="bar-chart"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Precision vs Recall (validation)</div>
+    <div class="legend">
+      <span class="leg"><span class="leg-sq" style="background:#2a7fff"></span>XGBoost</span>
+      <span class="leg"><span class="leg-sq" style="background:#22c97a"></span>Random Forest</span>
+      <span class="leg"><span class="leg-sq" style="background:#f0a832"></span>NN (Focal)</span>
+      <span class="leg"><span class="leg-sq" style="background:#c06adf"></span>Logistic Reg.</span>
+    </div>
+    <div class="scatter-wrap">
+      <canvas id="scatter-canvas"></canvas>
+      <div class="sc-tip" id="sc-tip"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Row: CV heatmap + comparison table -->
+<div class="row2b">
+  <div class="card">
+    <div class="card-title">Cross-validation PR-AUC — per fold</div>
+    <div id="cv-heat"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Full model comparison</div>
+    <table class="cmp" id="cmp-table"></table>
+  </div>
+</div>
+
+<!-- Train time -->
+<div class="card" style="margin-bottom:20px">
+  <div class="card-title">Training time in seconds (log scale perspective)</div>
+  <div id="time-bars"></div>
+</div>
+
+<footer>
+  <span>fraud_model_dashboard.html</span>
+  <span>Data source: model_comparison.csv · Primary metric: PR-AUC (Average Precision)</span>
+  <span>Generated February 2026</span>
+</footer>
+
+<script>
+const COLORS = {
+  'XGBoost':            '#2a7fff',
+  'Random Forest':      '#22c97a',
+  'NN (Focal)':         '#f0a832',
+  'Logistic Regression':'#c06adf',
+  'Dummy (Baseline)':   '#4a5060',
+};
+
+const VAL = [
+  { model:'XGBoost',            prauc:0.8072, f1:0.8372, recall:0.7347, precision:0.9730, rocauc:0.9737, mcc:0.8453, time:83.1,  best:1 },
+  { model:'Random Forest',      prauc:0.7850, f1:0.8140, recall:0.7143, precision:0.9459, rocauc:0.9351, mcc:0.8217, time:727.1, best:0 },
+  { model:'NN (Focal)',         prauc:0.7441, f1:0.7912, recall:0.7347, precision:0.8571, rocauc:0.9306, mcc:0.7932, time:16.9,  best:0 },
+  { model:'Logistic Regression',prauc:0.6645, f1:0.7742, recall:0.7347, precision:0.8182, rocauc:0.9661, mcc:0.7749, time:260.9, best:0 },
+  { model:'Dummy (Baseline)',   prauc:0.0017, f1:0.0000, recall:0.0000, precision:0.0000, rocauc:0.5000, mcc:0.0000, time:0,    best:0 },
+];
+const TEST_XGB = { prauc:0.8823, f1:0.8539, recall:0.7755, precision:0.9500, rocauc:0.9809, mcc:0.8581 };
+const CV_DATA = {
+  'XGBoost':             [0.873,  0.8099, 0.8358, 0.8905, 0.9118],
+  'Random Forest':       [0.8067, 0.7863, 0.8067, 0.8906, 0.9104],
+  'Logistic Regression': [null,   null,   null,   null,   null  ],
+};
+const METRICS = {
+  prauc:     'PR-AUC',
+  f1:        'F1-Score',
+  recall:    'Recall',
+  precision: 'Precision',
+  rocauc:    'ROC-AUC',
+  mcc:       'MCC',
+};
+
+// BAR CHART
+function renderBars(key) {
+  const sorted = [...VAL].sort((a,b) => b[key] - a[key]);
+  document.getElementById('bar-chart').innerHTML = sorted.map(d => `
+    <div class="bar-row${d.best?' best-row':''}">
+      <div class="bar-name">
+        <span class="dot" style="background:${COLORS[d.model]}"></span>
+        ${d.model}
+        ${d.best?'<span class="mk">★ Best</span>':''}
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${(d[key]*100).toFixed(2)}%;background:${COLORS[d.model]}${d.best?'':'99'}"></div>
+      </div>
+      <div class="bar-val">${d[key].toFixed(4)}</div>
+    </div>`).join('');
+}
+function setMetric(key, btn) {
+  document.querySelectorAll('.mtab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderBars(key);
+}
+renderBars('prauc');
+
+// SCATTER
+const canvas = document.getElementById('scatter-canvas');
+const ctx = canvas.getContext('2d');
+const tip = document.getElementById('sc-tip');
+
+function drawScatter() {
+  const W = canvas.parentElement.offsetWidth;
+  const H = 220;
+  const dpr = devicePixelRatio || 1;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.scale(dpr, dpr);
+
+  const pad = { l:30, r:12, t:12, b:24 };
+  const cW = W - pad.l - pad.r, cH = H - pad.t - pad.b;
+  const px = r => pad.l + r * cW;
+  const py = p => pad.t + (1-p) * cH;
+
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 0.5;
+  [0,0.25,0.5,0.75,1].forEach(v => {
+    ctx.beginPath(); ctx.moveTo(px(v), py(0)); ctx.lineTo(px(v), py(1)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px(0), py(v)); ctx.lineTo(px(1), py(v)); ctx.stroke();
+  });
+
+  // F1 iso-curves
+  ctx.strokeStyle = 'rgba(255,255,255,0.09)'; ctx.lineWidth = 0.8; ctx.setLineDash([3,3]);
+  [0.3,0.5,0.7,0.9].forEach(f1 => {
+    ctx.beginPath(); let first = true;
+    for (let r = 0.01; r <= 1; r += 0.005) {
+      const p = f1*r/(2*r-f1);
+      if (p>=0 && p<=1) { first ? ctx.moveTo(px(r),py(p)) : ctx.lineTo(px(r),py(p)); first=false; }
+    }
+    ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,0.22)'; ctx.font='9px DM Mono, monospace'; ctx.textAlign='right';
+    const r2=0.98; const p2=f1*r2/(2*r2-f1);
+    if(p2>=0&&p2<=1) ctx.fillText('F1='+f1, px(r2)-2, py(p2)-3);
+  });
+  ctx.setLineDash([]);
+
+  // Axes
+  ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.font='10px DM Mono, monospace'; ctx.textAlign='center';
+  [0,0.5,1].forEach(v => ctx.fillText(v.toFixed(1), px(v), H-4));
+  ctx.textAlign='right';
+  [0,0.5,1].forEach(v => ctx.fillText(v.toFixed(1), pad.l-4, py(v)+3));
+  ctx.fillStyle='rgba(255,255,255,0.2)'; ctx.textAlign='center';
+  ctx.fillText('Recall →', W/2, H);
+
+  // Points
+  VAL.filter(d=>d.model!=='Dummy (Baseline)').forEach(d => {
+    const x=px(d.recall), y=py(d.precision), r=d.best?10:7;
+    if (d.best) {
+      ctx.beginPath(); ctx.arc(x,y,r+5,0,Math.PI*2);
+      ctx.strokeStyle=COLORS[d.model]+'44'; ctx.lineWidth=1.5; ctx.stroke();
+    }
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle=COLORS[d.model]+(d.best?'':'bb'); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font=`${d.best?'bold ':''} 8px DM Mono, monospace`;
+    ctx.textAlign='center';
+    const lbl = {XGBoost:'XG','Random Forest':'RF','NN (Focal)':'NN','Logistic Regression':'LR'}[d.model];
+    ctx.fillText(lbl, x, y+3);
+  });
+}
+drawScatter();
+window.addEventListener('resize', drawScatter);
+
+// Scatter tooltip
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX-rect.left, my = e.clientY-rect.top;
+  const W = canvas.parentElement.offsetWidth, H = 220;
+  const pad = {l:30,r:12,t:12,b:24};
+  const px = r => pad.l + r*(W-pad.l-pad.r);
+  const py = p => pad.t + (1-p)*(H-pad.t-pad.b);
+  let hit = null;
+  VAL.filter(d=>d.model!=='Dummy (Baseline)').forEach(d => {
+    const dx=mx-px(d.recall), dy=my-py(d.precision);
+    if(Math.sqrt(dx*dx+dy*dy)<16) hit=d;
+  });
+  if(hit) {
+    tip.style.display='block';
+    tip.style.left=(mx+14)+'px'; tip.style.top=(my-10)+'px';
+    tip.innerHTML=`<strong style="color:${COLORS[hit.model]}">${hit.model}${hit.best?' ★':''}</strong>Recall: ${hit.recall.toFixed(4)}<br>Precision: ${hit.precision.toFixed(4)}<br>F1: ${hit.f1.toFixed(4)}<br>PR-AUC: ${hit.prauc.toFixed(4)}`;
+  } else tip.style.display='none';
+});
+canvas.addEventListener('mouseleave', ()=>tip.style.display='none');
+
+// CV HEATMAP
+function cvCellStyle(v) {
+  if(v===null) return `background:#1a1e27;color:#363b47`;
+  const all = [].concat(...Object.values(CV_DATA)).filter(x=>x!==null);
+  const mn=Math.min(...all), mx=Math.max(...all);
+  const t=(v-mn)/(mx-mn);
+  const r=Math.round(42+t*(42-42)), g=Math.round(127+t*(201-127)), b=Math.round(255+t*(122-255));
+  const textColor = t>0.45 ? '#042C53' : '#a8d0f5';
+  return `background:rgb(${r},${g},${b});color:${textColor}`;
+}
+
+(function renderCV(){
+  const models=['XGBoost','Random Forest','Logistic Regression'];
+  let html = `<div class="hm-header">
+    <div style="width:108px"></div>
+    ${[1,2,3,4,5].map(f=>`<div class="hm-fold-label">F${f}</div>`).join('')}
+    <div class="hm-mean">Mean</div>
+  </div>`;
+  models.forEach(m => {
+    const vals = CV_DATA[m];
+    const valid = vals.filter(v=>v!==null);
+    const mean = valid.length ? (valid.reduce((a,b)=>a+b,0)/valid.length) : null;
+    html += `<div class="hm-row" style="margin-bottom:4px">
+      <div class="hm-model">${m==='Logistic Regression'?'Log. Reg.':m}</div>
+      ${vals.map(v=>`<div class="hm-cell" style="${cvCellStyle(v)}">${v!==null?v.toFixed(2):'—'}</div>`).join('')}
+      <div class="hm-mean">${mean!==null?mean.toFixed(3):'—'}</div>
+    </div>`;
+  });
+  html += `<p class="hm-note">LR folds show high recall (~91%) but near-zero precision — PR-AUC scores not computed in original CV run. XGBoost has the smallest CV variance.</p>`;
+  document.getElementById('cv-heat').innerHTML = html;
+})();
+
+// COMPARISON TABLE
+(function renderTable(){
+  const best = VAL.find(d=>d.best);
+  document.getElementById('cmp-table').innerHTML = `
+    <thead><tr>
+      <th>Model</th><th>PR-AUC</th><th>F1</th><th>Recall</th><th>MCC</th>
+    </tr></thead>
+    <tbody>
+    ${VAL.map(d => {
+      const isBest = d.best;
+      const delta = (!isBest && d.prauc>0) ? ((d.prauc-best.prauc)/best.prauc*100).toFixed(1) : null;
+      const testStr = isBest ? `<span class="test-chip">test: ${TEST_XGB.prauc.toFixed(4)}</span>` : '';
+      return `<tr class="${isBest?'best-row':''}">
+        <td style="font-family:var(--body)">${d.model}${isBest?' ★':''}</td>
+        <td>${d.prauc.toFixed(4)}${testStr}${delta!==null?`<span class="delta delta-neg">${delta}%</span>`:''}</td>
+        <td>${d.f1.toFixed(4)}</td>
+        <td>${(d.recall*100).toFixed(1)}%</td>
+        <td>${d.mcc.toFixed(4)}</td>
+      </tr>`;
+    }).join('')}
+    </tbody>`;
+})();
+
+// TIME BARS
+(function renderTime(){
+  const data = VAL.filter(d=>d.model!=='Dummy (Baseline)'&&d.time>0).sort((a,b)=>b.time-a.time);
+  const maxT = Math.max(...data.map(d=>d.time));
+  document.getElementById('time-bars').innerHTML = data.map(d=>`
+    <div class="bar-row${d.best?' best-row':''}">
+      <div class="bar-name"><span class="dot" style="background:${COLORS[d.model]}"></span>${d.model}${d.best?'<span class="mk">★</span>':''}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(d.time/maxT*100).toFixed(2)}%;background:${COLORS[d.model]}${d.best?'':'88'}"></div></div>
+      <div class="bar-val">${d.time.toFixed(0)}s</div>
+    </div>`).join('');
+})();
+</script>
+</body>
+</html>

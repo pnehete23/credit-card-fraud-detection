@@ -1,0 +1,22 @@
+Model,Model_Type,Dataset,Fold,Is_Best_Model,PR-AUC,F1-Score,Recall,Fraud_Caught_Pct,Precision,ROC-AUC,MCC,Train Time (s)
+XGBoost,Ensemble (Boosting),Validation,All,1,0.8072,0.8372,0.7347,73.47,0.973,0.9737,0.8453,83.1
+Random Forest,Ensemble (Bagging),Validation,All,0,0.785,0.814,0.7143,71.43,0.9459,0.9351,0.8217,727.1
+NN (Focal),Deep Learning,Validation,All,0,0.7441,0.7912,0.7347,73.47,0.8571,0.9306,0.7932,16.9
+Logistic Regression,Linear,Validation,All,0,0.6645,0.7742,0.7347,73.47,0.8182,0.9661,0.7749,260.9
+Dummy (Baseline),Baseline,Validation,All,0,0.0017,0.0,0.0,0.0,0.0,0.5,0.0,0.0
+XGBoost,Ensemble (Boosting),Test,All,1,0.8823,0.8539,0.7755,77.55,0.95,0.9809,0.8581,
+Logistic Regression,Linear,CV,CV Fold 1,0,,0.126,0.9275,92.75,0.0676,0.9942,,
+Logistic Regression,Linear,CV,CV Fold 2,0,,0.1302,0.8406,84.06,0.0706,0.9715,,
+Logistic Regression,Linear,CV,CV Fold 3,0,,0.1266,0.913,91.3,0.068,0.9797,,
+Logistic Regression,Linear,CV,CV Fold 4,0,,0.1152,0.9565,95.65,0.0613,0.9933,,
+Logistic Regression,Linear,CV,CV Fold 5,0,,0.1096,0.9275,92.75,0.0582,0.989,,
+Random Forest,Ensemble (Bagging),CV,CV Fold 1,0,,0.8067,0.6957,69.57,0.96,0.9765,,
+Random Forest,Ensemble (Bagging),CV,CV Fold 2,0,,0.7863,0.6667,66.67,0.9583,0.923,,
+Random Forest,Ensemble (Bagging),CV,CV Fold 3,0,,0.8067,0.6957,69.57,0.96,0.9538,,
+Random Forest,Ensemble (Bagging),CV,CV Fold 4,0,,0.8906,0.8261,82.61,0.9661,0.9765,,
+Random Forest,Ensemble (Bagging),CV,CV Fold 5,0,,0.9104,0.8841,88.41,0.9385,0.9761,,
+XGBoost,Ensemble (Boosting),CV,CV Fold 1,1,,0.873,0.7971,79.71,0.9649,0.9929,,
+XGBoost,Ensemble (Boosting),CV,CV Fold 2,1,,0.8099,0.7101,71.01,0.9423,0.9527,,
+XGBoost,Ensemble (Boosting),CV,CV Fold 3,1,,0.8358,0.8116,81.16,0.8615,0.9921,,
+XGBoost,Ensemble (Boosting),CV,CV Fold 4,1,,0.8905,0.8841,88.41,0.8971,0.9895,,
+XGBoost,Ensemble (Boosting),CV,CV Fold 5,1,,0.9118,0.8986,89.86,0.9254,0.9833,,
